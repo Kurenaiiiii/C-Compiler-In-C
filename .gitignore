@@ -1,0 +1,13 @@
+# Build outputs
+ccc
+ccc-asan
+src/*.o
+src/*.d
+*.s
+*.o
+a.out
+# Test temporaries
+tests/tmp/
+# Debug
+core*
+/tmp/
