@@ -65,11 +65,13 @@ for t in tests/test-*.c; do
 done
 
 # --- error cases: clean diagnostic, non-zero exit, no crash ---
+# NOTE: error exits intentionally skip leak cleanup (like gcc on fatal
+# errors), so leak detection stays off for these invocations.
 for t in tests/err-*.c; do
     [ -e "$t" ] || continue
     name=$(basename "$t" .c)
     sub=$(sed -n 's|^// *ERROR: *\(.*\)|\1|p' "$t" | head -n 1)
-    if "$CCC" "$t" -o "$TMP/$name" 2>"$TMP/$name.err"; then
+    if ASAN_OPTIONS=detect_leaks=0 "$CCC" "$t" -o "$TMP/$name" 2>"$TMP/$name.err"; then
         report_fail "$name" "ccc accepted invalid program"
         continue
     fi

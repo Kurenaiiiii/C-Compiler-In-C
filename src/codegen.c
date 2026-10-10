@@ -1293,7 +1293,8 @@ static void layout_walk(CG *g, Node *n) {
             char buf[128];
             snprintf(buf, sizeof buf, "__static_%s_%s_%d", g->cur_fn_name,
                      d->name, g->static_counter++);
-            d->static_label = xstrdup(buf);
+            /* ponytail: arena string, freed with the compilation. */
+            d->static_label = arena_strdup(g_arena, buf);
             return;
         }
         if (d->type->kind == TY_VOID)
