@@ -1,9 +1,29 @@
 # C Compiler in C
 
+[![CI](https://github.com/Kurenaiiiii/c-compiler-in-c/actions/workflows/ci.yml/badge.svg)](https://github.com/Kurenaiiiii/c-compiler-in-c/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Standard: C11](https://img.shields.io/badge/standard-C11-blue.svg)](src)
+[![Tests: 201 passing](https://img.shields.io/badge/tests-201%20passing-brightgreen.svg)](tests)
+
 An independent educational project: a compiler for a substantial subset of
 C11, written in C11, that emits x86-64 assembly and produces executables
 through the system assembler and linker. It has no affiliation with any
 compiler vendor; it exists to learn how C compilers work by building one.
+
+## Contents
+
+- [Features](#features)
+- [Quick start](#quick-start)
+- [Usage](#usage)
+- [What this program becomes](#what-this-program-becomes)
+- [Supported language](#supported-language)
+- [Tests](#tests)
+- [Documentation](#documentation)
+- [Limitations](#limitations-honest-list)
+- [Roadmap](#roadmap)
+- [Self-hosting](#self-hosting)
+- [Project structure](#project-structure)
+- [License](#license)
 
 ## Features
 
@@ -198,6 +218,14 @@ download the `libasan`/`libubsan` RPMs and link with `-L`/`-rpath`; see
 `docs/ARCHITECTURE.md`). Error exits intentionally skip leak cleanup,
 matching what production compilers do on fatal errors.
 
+## Documentation
+
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — plain-English walkthrough
+  of every stage, following one tiny program through tokens, AST and
+  assembly, plus stack frames, the calling convention and trade-offs.
+- [docs/LEARNING.md](docs/LEARNING.md) — glossary of compiler terms and
+  12 interview-style questions and answers about this codebase.
+
 ## Limitations (honest list)
 
 - No floating point (`float`/`double` are rejected with a diagnostic).
@@ -218,6 +246,22 @@ matching what production compilers do on fatal errors.
   functions such as `printf` works; defining them does not).
 - Optimizations are basic: folding plus dead-code removal only. No
   register allocation (stack machine), no inlining, no loop opts.
+
+## Roadmap
+
+Each item below is a current limitation promoted to a planned next step,
+in rough priority order:
+
+1. Struct/union passed and returned by value (System V struct
+   classification), which also unlocks further self-hosting.
+2. Floating point (`float`/`double`) through lexing, types and codegen.
+3. Function-like preprocessor macros and more `#if` expression support.
+4. `va_list` on the callee side (defining variadic functions).
+5. More self-hosting: compiling all 11 translation units with `ccc`
+   itself (3 of 11 today).
+6. Deeper initializer lists for locals, designated initializers,
+   compound literals.
+7. Basic register allocation to replace the stack machine.
 
 ## Self-hosting
 
