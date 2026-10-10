@@ -494,6 +494,10 @@ static Type *visit_expr(Sema *s, Node *n) {
     case ND_CAST: {
         Type *l = visit_expr(s, n->lhs);
         (void)l;
+        if (n->sz_type->kind == TY_VOID) {
+            n->ty = ty_void; /* `(void)e`: value discarded */
+            return n->ty;
+        }
         if (!is_scalar(decay(n->sz_type)) && n->sz_type->kind != TY_STRUCT &&
             n->sz_type->kind != TY_UNION)
             error_at(n->loc, "invalid cast target");

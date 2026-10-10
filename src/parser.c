@@ -382,6 +382,60 @@ static Node *parse_primary(Parser *p);
 static Node *parse_stmt(Parser *p);
 static Node *parse_block(Parser *p);
 static Decl *parse_declarator(Parser *p, Type *base);
+static Decl *parse_direct(Parser *p, Type *base, char **out_name, Loc *out_loc);
+
+/* Apply `k` pending prefix stars to a direct-declarator type. Stars
+ * distribute to the base position: through paren-group pointers and
+ * function returns / array elements (`int *(*f)(int)` is pointer to
+ * function returning pointer), or wrap outside a plain base. */
+static Type *apply_pending(Type *t, int k) {
+    if (k <= 0)
+        return t;
+    if (t->kind == TY_PTR)
+        return ptr_to(apply_pending(t->base, k));
+    if (t->kind == TY_FUNC) {
+        Type *ft = func_type(apply_pending(t->ret, k));
+        ft->params = t->params;
+        ft->num_params = t->num_params;
+        ft->is_variadic = t->is_variadic;
+        return ft;
+    }
+    if (t->kind == TY_ARRAY)
+        return array_of(apply_pending(t->base, k), t->array_len);
+    Type *r = t;
+    for (int i = 0; i < k; i++)
+        r = ptr_to(r);
+    return r;
+}
+
+static Decl *parse_declarator(Parser *p, Type *base) {
+    /* Prefix stars are pending: the direct part decides where they bind. */
+    int nstars = 0;
+    while (at(p, TK_STAR)) {
+        next(p);
+        for (;;) {
+            if (at(p, TK_CONST) || at(p, TK_VOLATILE)) {
+                next(p);
+                continue;
+            }
+            if (at(p, TK_IDENT) &&
+                (strcmp(cur(p)->sval, "restrict") == 0 ||
+                 strcmp(cur(p)->sval, "__restrict") == 0 ||
+                 strcmp(cur(p)->sval, "__restrict__") == 0 ||
+                 strcmp(cur(p)->sval, "_Atomic") == 0)) {
+                next(p);
+                continue;
+            }
+            break;
+        }
+        nstars++;
+    }
+    char *name = NULL;
+    Loc loc = cur(p)->loc;
+    Decl *d = parse_direct(p, base, &name, &loc);
+    d->type = apply_pending(d->type, nstars);
+    return d;
+}
 static Node *parse_initializer(Parser *p);
 static Type *parse_typename(Parser *p);
 static long long eval_const(Parser *p, Node *n, int *ok);
@@ -851,32 +905,6 @@ static Type *apply_func(Parser *p, Type *ret, int inside_paren, Loc loc) {
     parse_param_list(p, shell);
     expect(p, TK_RPAREN, "')'");
     return wrap_func(ret, shell, inside_paren, loc);
-}
-
-static Decl *parse_declarator(Parser *p, Type *base) {
-    /* Prefix stars bind to the base first (see header note). */
-    for (;;) {
-        if (!at(p, TK_STAR))
-            break;
-        next(p);
-        for (;;) {
-            if (at(p, TK_CONST) || at(p, TK_VOLATILE)) {
-                next(p);
-                continue;
-            }
-            if (at(p, TK_IDENT) &&
-                (strcmp(cur(p)->sval, "restrict") == 0 ||
-                 strcmp(cur(p)->sval, "__restrict") == 0 ||
-                 strcmp(cur(p)->sval, "__restrict__") == 0 ||
-                 strcmp(cur(p)->sval, "_Atomic") == 0)) {
-                next(p);
-                continue;
-            }
-            break;
-        }
-        base = ptr_to(base);
-    }
-    return parse_direct(p, base, NULL, NULL);
 }
 
 /* Parse direct declarator given base; handles ident/paren + suffix loop.
@@ -1976,16 +2004,13 @@ static void parse_function_def(Parser *p, DeclSpec *ds, size_t start_pos) {
     if (at(p, TK_SEMI) || (stmt_is_declstart(p) && !at(p, TK_LBRACE)))
         error_at(cur(p)->loc, "K&R function definitions are not supported");
 
-    Type *ft = func_type(base);
+    Type *ret = base;
+    for (int i = 0; i < nptr; i++)
+        ret = ptr_to(ret);
+    Type *ft = func_type(ret);
     ft->num_params = nparams;
     ft->params = ptypes;
     ft->is_variadic = variadic;
-    for (int i = 0; i < nptr; i++)
-        ft = ptr_to(ft); /* `*f()` = function returning pointer: invalid here
-                          * unless intended; flag below. */
-    if (nptr > 0)
-        error_at(fname->loc, "declarators returning pointers to functions "
-                             "are not supported");
 
     Decl *fn = (Decl *)arena_calloc(g_arena, 1, sizeof(Decl));
     fn->name = fname->sval;
