@@ -1,0 +1,3 @@
+// ERROR: void function
+void f() { return 1; }
+int main() { f(); return 0; }
