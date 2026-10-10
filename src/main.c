@@ -214,9 +214,8 @@ int main(int argc, char **argv) {
 
     /* Emit assembly to memory-backed temp, then either print or assemble. */
     char *asm_path = NULL;
-    int need_tmp = !(emit_asm || emit_obj);
     FILE *af = NULL;
-    if (emit_asm || emit_obj) {
+    if (emit_asm) {
         if (output && strcmp(output, "-") != 0) {
             af = fopen(output, "w");
             if (!af) {
@@ -227,7 +226,7 @@ int main(int argc, char **argv) {
             fclose(af);
         } else if (output && strcmp(output, "-") == 0) {
             codegen(stdout);
-        } else if (emit_asm) {
+        } else {
             asm_path = with_ext(input, ".s");
             af = fopen(asm_path, "w");
             if (!af) {
@@ -238,26 +237,33 @@ int main(int argc, char **argv) {
             fclose(af);
             fprintf(stderr, "ccc: wrote %s\n", asm_path);
             free(asm_path);
-        } else {
-            asm_path = with_ext(input, ".o.s");
-            af = fopen(asm_path, "w");
-            if (!af) {
-                fprintf(stderr, "ccc: cannot write '%s'\n", asm_path);
-                return 1;
-            }
-            codegen(af);
-            fclose(af);
-            /* assemble only */
-            const char *obj = output ? output : with_ext(input, ".o");
-            char cmd[4096];
-            snprintf(cmd, sizeof cmd, "gcc -c -o '%s' '%s'", obj, asm_path);
-            int rc = system(cmd);
-            unlink(asm_path);
-            free(asm_path);
-            if (rc != 0) {
-                fprintf(stderr, "ccc: assembler failed\n");
-                return 1;
-            }
+        }
+        return 0;
+    } else if (emit_obj) {
+        /* Assemble-only: assembly -> temp file -> gcc -c. */
+        char tmpl[] = "/tmp/cccXXXXXX.s";
+        int fd = mkstemps(tmpl, 2);
+        if (fd < 0) {
+            fprintf(stderr, "ccc: cannot create temp file\n");
+            return 1;
+        }
+        af = fdopen(fd, "w");
+        if (!af) {
+            fprintf(stderr, "ccc: cannot write temp file\n");
+            close(fd);
+            return 1;
+        }
+        codegen(af);
+        fclose(af);
+        char *obj = output ? xstrdup(output) : with_ext(input, ".o");
+        char cmd[4096];
+        snprintf(cmd, sizeof cmd, "gcc -c -o '%s' '%s'", obj, tmpl);
+        int rc = system(cmd);
+        unlink(tmpl);
+        free(obj);
+        if (rc != 0) {
+            fprintf(stderr, "ccc: assembler failed\n");
+            return 1;
         }
         return 0;
     } else {
@@ -281,7 +287,6 @@ int main(int argc, char **argv) {
         snprintf(cmd, sizeof cmd, "gcc -o '%s' '%s'", out, tmpl);
         int rc = system(cmd);
         unlink(tmpl);
-        (void)need_tmp;
         if (rc != 0) {
             fprintf(stderr, "ccc: link failed\n");
             return 1;
