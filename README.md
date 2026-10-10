@@ -1,6 +1,6 @@
 # C Compiler in C
 
-[![CI](https://github.com/Kurenaiiiii/c-compiler-in-c/actions/workflows/ci.yml/badge.svg)](https://github.com/Kurenaiiiii/c-compiler-in-c/actions/workflows/ci.yml)
+[![CI](https://github.com/Kurenaiiiii/C-Compiler-In-C/actions/workflows/ci.yml/badge.svg)](https://github.com/Kurenaiiiii/C-Compiler-In-C/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Standard: C11](https://img.shields.io/badge/standard-C11-blue.svg)](src)
 [![Tests: 201 passing](https://img.shields.io/badge/tests-201%20passing-brightgreen.svg)](tests)
