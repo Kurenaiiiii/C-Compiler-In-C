@@ -758,10 +758,7 @@ static void gen_expr(CG *g, Node *n) {
             int l_false = new_label(g), l_end = new_label(g);
             gen_expr(g, n->lhs);
             emit(g, "  test rax, rax");
-            if (n->op == 'A')
-                emit(g, "  je .L%d", l_false);
-            else
-                emit(g, "  jne .L%d", l_false);
+            emit(g, "  je .L%d", l_false);
             /* Trick: use one label as "decided 1/0"? Simpler classic: */
             /* Rework: A: lhs false -> 0; else rhs truthiness. */
             if (n->op == 'A') {
@@ -973,7 +970,7 @@ static void gen_expr(CG *g, Node *n) {
         if (n->sz_type)
             v = n->sz_type->kind == TY_VOID ? 1 : type_size(n->sz_type);
         else if (n->lhs && n->lhs->ty)
-            v = type_size(decay_ty(n->lhs->ty));
+            v = type_size(n->lhs->ty); /* no decay, like sema */
         emit(g, "  movabs rax, %lld", v);
         return;
     }
@@ -1870,6 +1867,16 @@ void codegen(FILE *out) {
     int capg = 0;
     for (int i = 0; i < n; i++) {
         if (prog[i]->kind == ND_VARDECL) {
+            /* Merged tentative definitions share one Decl: emit once. */
+            int dup = 0;
+            for (int k = 0; k < g.nglobals; k++) {
+                if (g.globals[k] == prog[i]->decl) {
+                    dup = 1;
+                    break;
+                }
+            }
+            if (dup)
+                continue;
             if (g.nglobals == capg) {
                 capg = capg ? capg * 2 : 32;
                 g.globals = (Decl **)realloc(g.globals,

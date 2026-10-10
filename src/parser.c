@@ -1842,18 +1842,33 @@ static void parse_external(Parser *p) {
         expect(p, TK_SEMI, "';'");
         return;
     }
-    /* Global variable(s). */
+    /* Global variable(s). Tentative definitions (`int g;`) merge. */
     for (;;) {
-        if (d->name && scope_find_in(p->gscope, d->name))
+        Decl *ex = d->name ? scope_find_in(p->gscope, d->name) : NULL;
+        if (ex && ex->type->kind == TY_FUNC)
             error_at(d->loc, "redefinition of '%s'", d->name);
         if (at(p, TK_ASSIGN)) {
             next(p);
             d->init = parse_initializer(p);
         }
-        scope_add_var(p->gscope, d);
-        Node *vd = new_node(ND_VARDECL, d->loc);
-        vd->decl = d;
-        emit_top(vd);
+        if (ex) {
+            if (ex->init && d->init)
+                error_at(d->loc, "redefinition of '%s'", d->name);
+            if (ex->type->kind != d->type->kind ||
+                type_size(ex->type) != type_size(d->type))
+                error_at(d->loc, "conflicting types for '%s'", d->name);
+            if (d->init)
+                ex->init = d->init;
+            /* keep flags from the first declaration */
+            Node *vd = new_node(ND_VARDECL, d->loc);
+            vd->decl = ex;
+            emit_top(vd);
+        } else {
+            scope_add_var(p->gscope, d);
+            Node *vd = new_node(ND_VARDECL, d->loc);
+            vd->decl = d;
+            emit_top(vd);
+        }
         if (at(p, TK_COMMA)) {
             next(p);
             d = parse_declarator(p, ds.base);

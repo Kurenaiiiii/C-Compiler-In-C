@@ -196,13 +196,9 @@ long long sema_eval_const(Node *n, int *ok) {
             return n->sz_type->kind == TY_VOID ? 1 : type_size(n->sz_type);
         }
         if (n->lhs && n->lhs->ty) {
-            Type *t = n->lhs->ty;
-            if (t->kind == TY_ARRAY && n->lhs->kind == ND_STR) {
-                *ok = 1;
-                return type_size(t);
-            }
+            /* sizeof never decays: arrays keep their full size. */
             *ok = 1;
-            return type_size(decay(t));
+            return type_size(n->lhs->ty);
         }
         return 0;
     }
@@ -446,18 +442,37 @@ static Type *visit_expr(Sema *s, Node *n) {
                 error_at(n->loc, "shifts need integer operands");
             n->ty = promote(l);
             return n->ty;
+        case 'E':
+        case 'N': {
+            if (is_arith(l) && is_arith(r)) {
+            } else if (is_pointer(dl) && is_pointer(dr)) {
+            } else if ((is_pointer(dl) || is_pointer(dr)) &&
+                       (n->op == 'E' || n->op == 'N')) {
+                /* Null pointer constant comparison (`p == 0`). */
+                Node *other = is_pointer(dl) ? n->rhs : n->lhs;
+                int ok = 0;
+                long long v = sema_eval_const(other, &ok);
+                if (!ok || v != 0)
+                    error_at(n->loc, "invalid operands to comparison "
+                                      "(pointer needs address or 0)");
+            } else {
+                error_at(n->loc, "invalid operands to comparison");
+            }
+            n->ty = ty_int;
+            return n->ty;
+        }
         case '<':
         case '>':
         case 'l':
-        case 'g':
-        case 'E':
-        case 'N':
+        case 'g': {
             if (is_arith(l) && is_arith(r)) {
             } else if (is_pointer(dl) && is_pointer(dr)) {
-            } else
+            } else {
                 error_at(n->loc, "invalid operands to comparison");
+            }
             n->ty = ty_int;
             return n->ty;
+        }
         case '&':
         case '|':
         case '^':
@@ -497,6 +512,8 @@ static Type *visit_expr(Sema *s, Node *n) {
                 error_at(n->loc, "sizeof function");
         } else {
             visit_expr(s, n->lhs);
+            if (n->lhs->ty->kind == TY_FUNC)
+                error_at(n->loc, "sizeof function");
         }
         n->ty = ty_ulong;
         return n->ty;
@@ -828,16 +845,16 @@ void sema_analyze(void) {
                 if (!sscope_find(s.gscope, d->name))
                     sscope_add(s.gscope, d);
             } else {
-                if (sscope_find(s.gscope, d->name)) {
+                Decl *old = sscope_find(s.gscope, d->name);
+                if (old && old != d) {
                     /* Tentative definitions merge; real redefinition
                      * with initializer twice is an error. */
-                    Decl *old = sscope_find(s.gscope, d->name);
                     if (d->init && old->init)
                         error_at(t->loc, "redefinition of '%s'", d->name);
                     if (d->init)
                         old->init = d->init;
                     t->decl = old;
-                } else {
+                } else if (!old) {
                     sscope_add(s.gscope, d);
                 }
             }
@@ -845,6 +862,8 @@ void sema_analyze(void) {
     }
 
     /* Second pass: check inits + function bodies. */
+    const char *defined[1024];
+    int ndefined = 0;
     for (int i = 0; i < n; i++) {
         Node *t = prog[i];
         if (t->kind == ND_VARDECL) {
@@ -886,6 +905,12 @@ void sema_analyze(void) {
                 }
             }
         } else if (t->kind == ND_FUNCDEF) {
+            for (int k = 0; k < ndefined; k++) {
+                if (strcmp(defined[k], t->decl->name) == 0)
+                    error_at(t->loc, "redefinition of '%s'", t->decl->name);
+            }
+            if (ndefined < 1024)
+                defined[ndefined++] = t->decl->name;
             s.cur_fn = t->decl;
             s.cur_ret = t->decl->type->ret;
             s.nlabels = 0;
