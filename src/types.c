@@ -201,33 +201,6 @@ Type *usual_arith(Type *a, Type *b) {
     return ra > rb ? a : b;
 }
 
-const char *type_name(Type *t) {
-    static char buf[256];
-    if (!t)
-        return "?";
-    switch (t->kind) {
-    case TY_VOID: return "void";
-    case TY_BOOL: return "_Bool";
-    case TY_CHAR: return "char";
-    case TY_UCHAR: return "unsigned char";
-    case TY_SHORT: return "short";
-    case TY_USHORT: return "unsigned short";
-    case TY_INT: return "int";
-    case TY_UINT: return "unsigned int";
-    case TY_LONG: return "long";
-    case TY_ULONG: return "unsigned long";
-    case TY_PTR:
-        snprintf(buf, sizeof buf, "ptr");
-        return buf;
-    case TY_ARRAY: return "array";
-    case TY_STRUCT: return t->tag ? t->tag : "struct";
-    case TY_UNION: return t->tag ? t->tag : "union";
-    case TY_ENUM: return "enum";
-    case TY_FUNC: return "function";
-    }
-    return "?";
-}
-
 Member *find_member(Type *t, const char *name) {
     for (Member *m = t->members; m; m = m->next) {
         if (strcmp(m->name, name) == 0)

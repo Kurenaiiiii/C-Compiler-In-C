@@ -4,8 +4,6 @@
 #include "sema.h"
 #include <string.h>
 
-static int g_folded = 0;
-
 static Node *fold_expr(Node *n);
 
 static Node *fold_expr(Node *n) {
@@ -29,7 +27,6 @@ static Node *fold_expr(Node *n) {
                 n->kind = ND_NUM;
                 n->ival = v;
                 n->lhs = n->rhs = NULL;
-                g_folded++;
             }
         }
         return n;
@@ -43,7 +40,6 @@ static Node *fold_expr(Node *n) {
                 n->kind = ND_NUM;
                 n->ival = v;
                 n->lhs = NULL;
-                g_folded++;
             }
         }
         return n;
@@ -53,7 +49,6 @@ static Node *fold_expr(Node *n) {
         n->els = fold_expr(n->els);
         if (n->cond->kind == ND_NUM) {
             Node *pick = n->cond->ival ? n->then : n->els;
-            g_folded++;
             return pick;
         }
         return n;
@@ -64,7 +59,6 @@ static Node *fold_expr(Node *n) {
             n->kind = ND_NUM;
             n->ival = v;
             n->lhs = NULL;
-            g_folded++;
         } else if (n->lhs) {
             n->lhs = fold_expr(n->lhs);
         }
@@ -79,7 +73,6 @@ static Node *fold_expr(Node *n) {
                 n->kind = ND_NUM;
                 n->ival = v;
                 n->lhs = NULL;
-                g_folded++;
             }
         }
         return n;
@@ -234,5 +227,4 @@ void opt_run(void) {
             t->decl->init = fold_expr(t->decl->init);
         }
     }
-    (void)g_folded;
 }

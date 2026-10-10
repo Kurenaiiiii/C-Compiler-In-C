@@ -20,14 +20,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef struct SwitchCtx SwitchCtx;
-struct SwitchCtx {
-    int id;
-    int end_label;
-    int disp_label;
-    SwitchCtx *prev;
-};
-
 typedef struct {
     FILE *out;
     int seq;
@@ -38,7 +30,6 @@ typedef struct {
     int nbreaks, capbreaks;
     int *conts;
     int nconts, capconts;
-    SwitchCtx *sw;
     int static_counter;
     /* globals to emit */
     Decl **globals;
@@ -64,9 +55,6 @@ static Type *decay_ty(Type *t);
 static int count_is_one(Node *list);
 
 /* --- type helpers --- */
-static int ty_size(Type *t) {
-    return type_size(t);
-}
 
 /* Load [rax] -> rax per type t (address in rax). */
 static void emit_load(CG *g, Type *t) {
@@ -1927,5 +1915,4 @@ void codegen(FILE *out) {
     free(g.conts);
     free(g.globals);
     free(fns);
-    (void)ty_size; /* kept for debugging aid */
 }

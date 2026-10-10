@@ -46,12 +46,9 @@ extern Arena *g_arena; /* active compilation arena (for short-lived strings) */
 /* ---------- errors ---------- */
 /* Register the full source text so diagnostics can print snippets. */
 void error_set_source(const char *file, const char *text);
-int error_count(void);
 /* Print "file:line:col: error: msg", snippet + caret, then exit(1).
  * Never returns. Never crashes on invalid input. */
 void error_at(Loc loc, const char *fmt, ...);
-void error_at_token(const char *file, int line, int col, const char *fmt, ...);
-void warn_at(Loc loc, const char *fmt, ...);
 
 /* ---------- util ---------- */
 void *xmalloc(size_t n);

@@ -92,5 +92,10 @@ for t in tests/err-*.c; do
 done
 
 total=$((pass + fail))
-echo "tests: $pass passed, $fail failed, $total total"
+nvalid=$(ls tests/test-*.c 2>/dev/null | wc -l)
+echo "tests: $pass passed, $fail failed, $total total ($nvalid valid programs)"
+if [ "$nvalid" -lt 150 ]; then
+    echo "FAIL: need at least 150 valid test programs, have $nvalid"
+    exit 1
+fi
 [ "$fail" -eq 0 ]

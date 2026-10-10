@@ -92,19 +92,13 @@ struct Node {
     Type *sz_type;   /* ND_SIZEOF type operand / ND_CAST target */
     Decl **params;   /* FUNCDEF params */
     int nparams;
-    int is_static;   /* block-level static propagation not needed */
     int is_decls;    /* BLOCK came from a declaration list: splice, don't nest */
 };
 
-extern Node *g_prog;      /* array of top-level nodes (FUNCDEF/VARDECL) */
-extern int g_nprog;
-
 Node *new_node(NodeKind kind, Loc loc);
-void prog_push(Node *n);
 void block_push(Node *block, Node *stmt);
 void call_push_arg(Node *call, Node *arg);
 void initlist_push(Node *list, Node *e);
-const char *nodekind_name(NodeKind k);
 
 /* Debug dump (s-expression) used by --dump-ast. */
 void dump_ast(FILE *fp);

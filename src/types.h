@@ -84,7 +84,6 @@ int int_rank(Type *t); /* 0=bool 1=char 2=short 3=int 4=long 5=enum */
 Type *usual_arith(Type *a, Type *b);
 /* Integer promotion. */
 Type *promote(Type *t);
-const char *type_name(Type *t); /* arena string, for errors/dumps */
 
 Member *find_member(Type *t, const char *name);
 int struct_size_align(Type *t); /* fills size/align/offsets; 0 ok, -1 incomplete */

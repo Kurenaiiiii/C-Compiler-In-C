@@ -6,7 +6,6 @@
 
 static const char *src_file = "<input>";
 static const char *src_text = NULL;
-static int nerrors = 0;
 
 void *xmalloc(size_t n) {
     void *p = malloc(n ? n : 1);
@@ -47,10 +46,6 @@ void error_set_source(const char *file, const char *text) {
     src_file = file ? file : "<input>";
     src_text = text;
     (void)src_file;
-}
-
-int error_count(void) {
-    return nerrors;
 }
 
 /* Print the source line for (file, line) plus a caret under `col`.
@@ -137,7 +132,6 @@ static void print_snippet(const char *file, int line, int col) {
 }
 
 void error_at(Loc loc, const char *fmt, ...) {
-    nerrors++;
     va_list ap;
     va_start(ap, fmt);
     fprintf(stderr, "%s:%d:%d: error: ", loc.file ? loc.file : src_file,
@@ -149,24 +143,3 @@ void error_at(Loc loc, const char *fmt, ...) {
     exit(1);
 }
 
-void error_at_token(const char *file, int line, int col, const char *fmt, ...) {
-    nerrors++;
-    va_list ap;
-    va_start(ap, fmt);
-    fprintf(stderr, "%s:%d:%d: error: ", file ? file : src_file, line, col);
-    vfprintf(stderr, fmt, ap);
-    fprintf(stderr, "\n");
-    va_end(ap);
-    print_snippet(file ? file : src_file, line, col);
-    exit(1);
-}
-
-void warn_at(Loc loc, const char *fmt, ...) {
-    va_list ap;
-    va_start(ap, fmt);
-    fprintf(stderr, "%s:%d:%d: warning: ", loc.file ? loc.file : src_file,
-            loc.line, loc.col);
-    vfprintf(stderr, fmt, ap);
-    fprintf(stderr, "\n");
-    va_end(ap);
-}

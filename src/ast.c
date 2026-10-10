@@ -2,33 +2,12 @@
 #include "ast.h"
 #include <string.h>
 
-Node *g_prog = NULL;
-int g_nprog = 0;
-static Node **prog_list = NULL;
-static int prog_cap = 0;
-static Arena *aarena = NULL;
-
 Node *new_node(NodeKind kind, Loc loc) {
-    if (!aarena)
-        aarena = g_arena;
     Node *n = (Node *)arena_calloc(g_arena, 1, sizeof(Node));
     n->kind = kind;
     n->loc = loc;
     n->ty = NULL;
     return n;
-}
-
-void prog_push(Node *n) {
-    if (g_nprog == prog_cap) {
-        int ncap = prog_cap ? prog_cap * 2 : 64;
-        Node **nl = (Node **)arena_alloc(g_arena, (size_t)ncap * sizeof(Node *));
-        if (prog_list)
-            memcpy(nl, prog_list, (size_t)g_nprog * sizeof(Node *));
-        prog_list = nl;
-        prog_cap = ncap;
-    }
-    prog_list[g_nprog++] = n;
-    g_prog = prog_list[0];
 }
 
 void block_push(Node *block, Node *stmt) {
@@ -55,43 +34,6 @@ void call_push_arg(Node *call, Node *arg) {
 
 void initlist_push(Node *list, Node *e) {
     block_push(list, e);
-}
-
-const char *nodekind_name(NodeKind k) {
-    switch (k) {
-    case ND_NUM: return "num";
-    case ND_STR: return "str";
-    case ND_VAR: return "var";
-    case ND_CALL: return "call";
-    case ND_FUNCDEF: return "funcdef";
-    case ND_VARDECL: return "vardecl";
-    case ND_BLOCK: return "block";
-    case ND_EXPR_STMT: return "expr-stmt";
-    case ND_IF: return "if";
-    case ND_WHILE: return "while";
-    case ND_DO: return "do";
-    case ND_FOR: return "for";
-    case ND_RETURN: return "return";
-    case ND_BREAK: return "break";
-    case ND_CONTINUE: return "continue";
-    case ND_SWITCH: return "switch";
-    case ND_CASE: return "case";
-    case ND_LABEL: return "label";
-    case ND_GOTO: return "goto";
-    case ND_ASSIGN: return "assign";
-    case ND_COMPOUND: return "compound-assign";
-    case ND_TERNARY: return "ternary";
-    case ND_COMMA: return "comma";
-    case ND_UNARY: return "unary";
-    case ND_BINARY: return "binary";
-    case ND_CAST: return "cast";
-    case ND_SIZEOF: return "sizeof";
-    case ND_MEMBER: return "member";
-    case ND_SUBSCRIPT: return "subscript";
-    case ND_INIT_LIST: return "init-list";
-    case ND_NOP: return "nop";
-    }
-    return "?";
 }
 
 static void dump_type(FILE *fp, Type *t) {
